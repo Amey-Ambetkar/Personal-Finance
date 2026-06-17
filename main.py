@@ -4,676 +4,270 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
 from sqlalchemy import create_engine, String, Float, ForeignKey, select
-from sqlalchemy.orm import (
-    DeclarativeBase,
-    Mapped,
-    mapped_column,
-    Session,
-    sessionmaker,
-)
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session, sessionmaker
 
-import jwt
-import bcrypt
-
+import jwt, bcrypt
 from datetime import datetime, timedelta
 
-# ==========================================
-# JWT CONFIG
-# ==========================================
+# =========================
+# CONFIG
+# =========================
 
 SECRET_KEY = "mysecretkey"
 ALGORITHM = "HS256"
-
-# ==========================================
-# DATABASE
-# ==========================================
-
 DATABASE_URL = "sqlite:///expense_tracker.db"
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False}
-)
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
-SessionLocal = sessionmaker(
-    bind=engine,
-    autoflush=False,
-    autocommit=False
-)
+app = FastAPI()
 
-# ==========================================
-# BASE
-# ==========================================
+templates = Jinja2Templates(directory="Frontend/templates")
+app.mount("/static", StaticFiles(directory="Frontend/static"), name="static")
+
+# =========================
+# DB BASE
+# =========================
 
 class Base(DeclarativeBase):
     pass
 
-# ==========================================
+# =========================
 # MODELS
-# ==========================================
+# =========================
 
 class User(Base):
     __tablename__ = "users"
-
     id: Mapped[int] = mapped_column(primary_key=True)
-
-    name: Mapped[str] = mapped_column(
-        String(50)
-    )
-
-    email: Mapped[str] = mapped_column(
-        String(100),
-        unique=True
-    )
-
-    password: Mapped[str] = mapped_column(
-        String(255)
-    )
+    name: Mapped[str] = mapped_column(String(50))
+    email: Mapped[str] = mapped_column(String(100), unique=True)
+    password: Mapped[str] = mapped_column(String(255))
 
 
 class Expense(Base):
     __tablename__ = "expenses"
-
-    id: Mapped[int] = mapped_column(
-        primary_key=True
-    )
-
-    title: Mapped[str] = mapped_column(
-        String(100)
-    )
-
-    amount: Mapped[float] = mapped_column(
-        Float
-    )
-
-    category: Mapped[str] = mapped_column(
-        String(50)
-    )
-
-    description: Mapped[str] = mapped_column(
-        String(255)
-    )
-
-    date: Mapped[str] = mapped_column(
-        String(50)
-    )
-
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id")
-    )
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(100))
+    amount: Mapped[float] = mapped_column(Float)
+    category: Mapped[str] = mapped_column(String(50))
+    description: Mapped[str] = mapped_column(String(255))
+    date: Mapped[str] = mapped_column(String(50))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
 
 
 class Budget(Base):
     __tablename__ = "budgets"
-
-    id: Mapped[int] = mapped_column(
-        primary_key=True
-    )
-
-    monthly_limit: Mapped[float] = mapped_column(
-        Float
-    )
-
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id")
-    )
-
-# ==========================================
-# CREATE TABLES
-# ==========================================
+    id: Mapped[int] = mapped_column(primary_key=True)
+    monthly_limit: Mapped[float] = mapped_column(Float)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
 
 Base.metadata.create_all(bind=engine)
 
-# ==========================================
-# APP
-# ==========================================
-
-app = FastAPI()
-
-templates = Jinja2Templates(
-    directory="Frontend/templates"
-)
-
-app.mount(
-    "/static",
-    StaticFiles(directory="Frontend/static"),
-    name="static"
-)
-
-# ==========================================
-# DATABASE DEPENDENCY
-# ==========================================
+# =========================
+# DEPENDENCIES
+# =========================
 
 def get_db():
-
     db = SessionLocal()
-
     try:
         yield db
-
     finally:
         db.close()
 
-# ==========================================
-# PASSWORD FUNCTIONS
-# ==========================================
 
-def hash_password(password: str):
+def require_user(user):
+    if not user:
+        return RedirectResponse("/login", status_code=303)
 
-    return bcrypt.hashpw(
-        password.encode(),
-        bcrypt.gensalt()
-    ).decode()
+# =========================
+# HELPERS
+# =========================
 
+def q_user(db, email):
+    return db.scalars(select(User).where(User.email == email)).first()
 
-def verify_password(
-    plain_password,
-    hashed_password
-):
+def q_expenses(db, uid):
+    return db.scalars(select(Expense).where(Expense.user_id == uid)).all()
 
-    return bcrypt.checkpw(
-        plain_password.encode(),
-        hashed_password.encode()
-    )
+def q_budget(db, uid):
+    return db.scalars(select(Budget).where(Budget.user_id == uid)).first()
 
-# ==========================================
-# JWT FUNCTIONS
-# ==========================================
+# =========================
+# AUTH UTILS
+# =========================
 
-def create_token(email: str):
+def hash_password(p):
+    return bcrypt.hashpw(p.encode(), bcrypt.gensalt()).decode()
 
-    payload = {
-        "sub": email,
-        "exp": datetime.utcnow() + timedelta(hours=2)
-    }
+def verify_password(p, h):
+    return bcrypt.checkpw(p.encode(), h.encode())
 
-    return jwt.encode(
-        payload,
-        SECRET_KEY,
-        algorithm=ALGORITHM
-    )
+def create_token(email):
+    payload = {"sub": email, "exp": datetime.utcnow() + timedelta(hours=2)}
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
-
-def get_current_user(
-    request: Request,
-    db: Session = Depends(get_db)
-):
-
-    token = request.cookies.get(
-        "access_token"
-    )
-
+def get_current_user(request: Request, db: Session = Depends(get_db)):
+    token = request.cookies.get("access_token")
     if not token:
         return None
-
     try:
-
-        payload = jwt.decode(
-            token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM]
-        )
-
-        email = payload.get("sub")
-
+        email = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM]).get("sub")
     except:
         return None
+    return q_user(db, email)
 
-    user = db.scalars(
-        select(User).where(
-            User.email == email
-        )
-    ).first()
+# =========================
+# AUTH ROUTES
+# =========================
 
-    return user
-
-# ==========================================
-# AUTH PAGES
-# ==========================================
-
-@app.get("/", response_class=HTMLResponse)
+@app.get("/")
 def home():
-
-    return RedirectResponse(
-        "/login",
-        status_code=303
-    )
-
+    return RedirectResponse("/login")
 
 @app.get("/signup", response_class=HTMLResponse)
-def signup_page(
-    request: Request
-):
-
-    return templates.TemplateResponse(
-        request=request,
-        name="signup.html"
-    )
-
+def signup_page(request: Request):
+    return templates.TemplateResponse("signup.html", {"request": request})
 
 @app.post("/signup")
-def signup_post(
-    request: Request,
-    name: str = Form(...),
-    email: str = Form(...),
-    password: str = Form(...),
-    db: Session = Depends(get_db)
-):
+def signup(name: str = Form(...), email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db), request: Request = None):
+    if q_user(db, email):
+        return templates.TemplateResponse("signup.html", {"request": request, "error": "Email exists"})
 
-    existing = db.scalars(
-        select(User).where(
-            User.email == email
-        )
-    ).first()
-
-    if existing:
-
-        return templates.TemplateResponse(
-            request=request,
-            name="signup.html",
-            context={
-                "error": "Email already exists"
-            }
-        )
-
-    user = User(
-        name=name,
-        email=email,
-        password=hash_password(password)
-    )
-
-    db.add(user)
+    db.add(User(name=name, email=email, password=hash_password(password)))
     db.commit()
-
-    return RedirectResponse(
-        "/login",
-        status_code=303
-    )
-
+    return RedirectResponse("/login", status_code=303)
 
 @app.get("/login", response_class=HTMLResponse)
-def login_page(
-    request: Request
-):
-
-    return templates.TemplateResponse(
-        request=request,
-        name="login.html"
-    )
-
+def login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
 
 @app.post("/login")
-def login_post(
-    email: str = Form(...),
-    password: str = Form(...),
-    db: Session = Depends(get_db)
-):
+def login(email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+    user = q_user(db, email)
 
-    user = db.scalars(
-        select(User).where(
-            User.email == email
-        )
-    ).first()
+    if not user or not verify_password(password, user.password):
+        return RedirectResponse("/login", status_code=303)
 
-    if not user:
-
-        return RedirectResponse(
-            "/login",
-            status_code=303
-        )
-
-    if not verify_password(
-        password,
-        user.password
-    ):
-
-        return RedirectResponse(
-            "/login",
-            status_code=303
-        )
-
-    token = create_token(
-        user.email
-    )
-
-    response = RedirectResponse(
-        "/dashboard",
-        status_code=303
-    )
-
-    response.set_cookie(
-        key="access_token",
-        value=token,
-        httponly=True
-    )
-
-    return response
-
-# ==========================================
-# LOGOUT
-# ==========================================
+    token = create_token(user.email)
+    resp = RedirectResponse("/dashboard", status_code=303)
+    resp.set_cookie("access_token", token, httponly=True)
+    return resp
 
 @app.get("/logout")
 def logout():
+    resp = RedirectResponse("/login", status_code=303)
+    resp.delete_cookie("access_token")
+    return resp
 
-    response = RedirectResponse(
-        "/login",
-        status_code=303
-    )
-
-    response.delete_cookie(
-        "access_token"
-    )
-
-    return response
-
-
-# ==========================================
+# =========================
 # DASHBOARD
-# ==========================================
+# =========================
 
 @app.get("/dashboard", response_class=HTMLResponse)
-def dashboard_page(
-    request: Request,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
+def dashboard(request: Request, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    if (r := require_user(current_user)):
+        return r
 
-    if not current_user:
+    expenses = q_expenses(db, current_user.id)
+    budget = q_budget(db, current_user.id)
 
-        return RedirectResponse(
-            "/login",
-            status_code=303
-        )
+    total = sum(e.amount for e in expenses)
+    limit = budget.monthly_limit if budget else 0
 
-    expenses = db.scalars(
-        select(Expense).where(
-            Expense.user_id == current_user.id
-        )
-    ).all()
+    return templates.TemplateResponse("dashboard.html", {
+        "request": request,
+        "current_user": current_user,
+        "total_expense": total,
+        "monthly_budget": limit,
+        "remaining_budget": limit - total,
+        "total_transactions": len(expenses)
+    })
 
-    budget = db.scalars(
-        select(Budget).where(
-            Budget.user_id == current_user.id
-        )
-    ).first()
+# =========================
+# EXPENSES
+# =========================
 
-    total_expense = sum(
-        expense.amount
-        for expense in expenses
-    )
-
-    monthly_budget = (
-        budget.monthly_limit
-        if budget
-        else 0
-    )
-
-    remaining_budget = (
-        monthly_budget - total_expense
-    )
-
-    return templates.TemplateResponse(
-        request=request,
-        name="dashboard.html",
-        context={
-            "current_user": current_user,
-            "total_expense": total_expense,
-            "monthly_budget": monthly_budget,
-            "remaining_budget": remaining_budget,
-            "total_transactions": len(expenses)
-        }
-    )
-
-
-# ==========================================
-# CREATE EXPENSE PAGE
-# ==========================================
-
-@app.get("/create-expense",
-         response_class=HTMLResponse)
-def create_expense_page(
-    request: Request,
-    current_user: User = Depends(get_current_user)
-):
-
-    if not current_user:
-
-        return RedirectResponse(
-            "/login",
-            status_code=303
-        )
-
-    return templates.TemplateResponse(
-        request=request,
-        name="create_expense.html"
-    )
-
-
-# ==========================================
-# CREATE EXPENSE
-# ==========================================
+@app.get("/create-expense", response_class=HTMLResponse)
+def create_page(request: Request, current_user=Depends(get_current_user)):
+    if (r := require_user(current_user)):
+        return r
+    return templates.TemplateResponse("create_expense.html", {"request": request})
 
 @app.post("/create-expense")
-def create_expense(
-    title: str = Form(...),
-    amount: float = Form(...),
-    category: str = Form(...),
-    description: str = Form(...),
-    date: str = Form(...),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
+def create_expense(title: str = Form(...), amount: float = Form(...), category: str = Form(...),
+                    description: str = Form(...), date: str = Form(...),
+                    db: Session = Depends(get_db), current_user=Depends(get_current_user)):
 
-    if not current_user:
+    if (r := require_user(current_user)):
+        return r
 
-        return RedirectResponse(
-            "/login",
-            status_code=303
-        )
-
-    expense = Expense(
+    db.add(Expense(
         title=title,
         amount=amount,
         category=category,
         description=description,
         date=date,
         user_id=current_user.id
-    )
-
-    db.add(expense)
+    ))
     db.commit()
+    return RedirectResponse("/dashboard", status_code=303)
 
-    return RedirectResponse(
-        "/dashboard",
-        status_code=303
-    )
+@app.get("/update-expense/{expense_id}", response_class=HTMLResponse)
+def update_page(expense_id: int, request: Request, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    if (r := require_user(current_user)):
+        return r
 
+    expense = db.get(Expense, expense_id)
+    return templates.TemplateResponse("update_expense.html", {"request": request, "expense": expense})
 
-# ==========================================
-# UPDATE PAGE
-# ==========================================
+@app.post("/update-expense/{expense_id}")
+def update_expense(expense_id: int, title: str = Form(...), amount: float = Form(...),
+                   category: str = Form(...), description: str = Form(...), date: str = Form(...),
+                   db: Session = Depends(get_db), current_user=Depends(get_current_user)):
 
-@app.get(
-    "/update-expense/{expense_id}",
-    response_class=HTMLResponse
-)
-def update_expense_page(
-    expense_id: int,
-    request: Request,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
+    if (r := require_user(current_user)):
+        return r
 
-    if not current_user:
-
-        return RedirectResponse(
-            "/login",
-            status_code=303
-        )
-
-    expense = db.get(
-        Expense,
-        expense_id
-    )
-
-    return templates.TemplateResponse(
-        request=request,
-        name="update_expense.html",
-        context={
-            "expense": expense
-        }
-    )
-
-
-# ==========================================
-# UPDATE EXPENSE
-# ==========================================
-
-@app.post(
-    "/update-expense/{expense_id}"
-)
-def update_expense(
-    expense_id: int,
-    title: str = Form(...),
-    amount: float = Form(...),
-    category: str = Form(...),
-    description: str = Form(...),
-    date: str = Form(...),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-
-    if not current_user:
-
-        return RedirectResponse(
-            "/login",
-            status_code=303
-        )
-
-    expense = db.get(
-        Expense,
-        expense_id
-    )
-
-    if expense:
-
-        expense.title = title
-        expense.amount = amount
-        expense.category = category
-        expense.description = description
-        expense.date = date
-
+    e = db.get(Expense, expense_id)
+    if e:
+        e.title, e.amount, e.category, e.description, e.date = title, amount, category, description, date
         db.commit()
 
-    return RedirectResponse(
-        "/dashboard",
-        status_code=303
-    )
+    return RedirectResponse("/dashboard", status_code=303)
 
+@app.get("/delete-expense/{expense_id}")
+def delete_expense(expense_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    if (r := require_user(current_user)):
+        return r
 
-# ==========================================
-# DELETE EXPENSE
-# ==========================================
-
-@app.get(
-    "/delete-expense/{expense_id}"
-)
-def delete_expense(
-    expense_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-
-    if not current_user:
-
-        return RedirectResponse(
-            "/login",
-            status_code=303
-        )
-
-    expense = db.get(
-        Expense,
-        expense_id
-    )
-
-    if expense:
-
-        db.delete(expense)
+    e = db.get(Expense, expense_id)
+    if e:
+        db.delete(e)
         db.commit()
 
-    return RedirectResponse(
-        "/dashboard",
-        status_code=303
-    )
+    return RedirectResponse("/dashboard", status_code=303)
 
+# =========================
+# BUDGET
+# =========================
 
-# ==========================================
-# BUDGET PAGE
-# ==========================================
-
-@app.get(
-    "/budget",
-    response_class=HTMLResponse
-)
-def budget_page(
-    request: Request,
-    current_user: User = Depends(get_current_user)
-):
-
-    if not current_user:
-
-        return RedirectResponse(
-            "/login",
-            status_code=303
-        )
-
-    return templates.TemplateResponse(
-        request=request,
-        name="budget.html"
-    )
-
-
-# ==========================================
-# SAVE BUDGET
-# ==========================================
+@app.get("/budget", response_class=HTMLResponse)
+def budget_page(request: Request, current_user=Depends(get_current_user)):
+    if (r := require_user(current_user)):
+        return r
+    return templates.TemplateResponse("budget.html", {"request": request})
 
 @app.post("/budget")
-def save_budget(
-    monthly_limit: float = Form(...),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
+def save_budget(monthly_limit: float = Form(...), db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    if (r := require_user(current_user)):
+        return r
 
-    if not current_user:
+    b = q_budget(db, current_user.id)
 
-        return RedirectResponse(
-            "/login",
-            status_code=303
-        )
-
-    budget = db.scalars(
-        select(Budget).where(
-            Budget.user_id == current_user.id
-        )
-    ).first()
-
-    if budget:
-
-        budget.monthly_limit = monthly_limit
-
+    if b:
+        b.monthly_limit = monthly_limit
     else:
-
-        budget = Budget(
-            monthly_limit=monthly_limit,
-            user_id=current_user.id
-        )
-
-        db.add(budget)
+        db.add(Budget(monthly_limit=monthly_limit, user_id=current_user.id))
 
     db.commit()
-
-    return RedirectResponse(
-        "/dashboard",
-        status_code=303
-    )
+    return RedirectResponse("/dashboard", status_code=303)
