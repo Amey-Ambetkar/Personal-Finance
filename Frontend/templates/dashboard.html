@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="container">
+
+    <h1>Dashboard</h1>
+
+    <div class="card">
+        <h3>Total Expenses</h3>
+        <p>₹ {{ total_expense }}</p>
+    </div>
+
+    <div class="card">
+        <h3>Monthly Budget</h3>
+        <p>₹ {{ monthly_budget }}</p>
+    </div>
+
+    <div class="card">
+        <h3>Remaining Budget</h3>
+        <p>₹ {{ remaining_budget }}</p>
+    </div>
+
+    <div class="card">
+        <h3>Total Transactions</h3>
+        <p>{{ total_transactions }}</p>
+    </div>
+
+    <br>
+
+    <a href="/create-expense">
+        <button>Add Expense</button>
+    </a>
+
+    <a href="/budget">
+        <button>Set Budget</button>
+    </a>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Budget</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="container">
+
+    <h1>Set Budget</h1>
+
+    <form action="/budget" method="post">
+
+        <input type="number"
+               step="0.01"
+               name="monthly_limit"
+               placeholder="Monthly Budget"
+               required>
+
+        <button type="submit">
+            Save Budget
+        </button>
+
+    </form>
+
+</div>
+
+</body>
+</html>
