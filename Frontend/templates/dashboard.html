@@ -1,16 +1,6 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Dashboard</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
+<div class="dashboard-grid">
 
-<div class="container">
-
-    <h1>Dashboard</h1>
-
-    <div class="card">
+    <div class="card success-card">
         <h3>Total Expenses</h3>
         <p>₹ {{ total_expense }}</p>
     </div>
@@ -20,7 +10,7 @@
         <p>₹ {{ monthly_budget }}</p>
     </div>
 
-    <div class="card">
+    <div class="card warning-card">
         <h3>Remaining Budget</h3>
         <p>₹ {{ remaining_budget }}</p>
     </div>
@@ -30,8 +20,9 @@
         <p>{{ total_transactions }}</p>
     </div>
 
-    <br>
+</div>
 
+<div class="actions">
     <a href="/create-expense">
         <button>Add Expense</button>
     </a>
@@ -40,7 +31,7 @@
         <button>Set Budget</button>
     </a>
 
+    <a href="/logout">
+        <button class="logout-btn">Logout</button>
+    </a>
 </div>
-
-</body>
-</html>
