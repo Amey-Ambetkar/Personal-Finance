@@ -14,13 +14,13 @@ from sqlalchemy.orm import (
 import jwt
 import bcrypt
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 # ==========================================
 # JWT CONFIG
 # ==========================================
 
-SECRET_KEY = "mysecretkey"
+SECRET_KEY = "my-super-secret-key-for-jwt-auth-32b"
 ALGORITHM = "HS256"
 
 # ==========================================
@@ -183,7 +183,7 @@ def create_token(email: str):
 
     payload = {
         "sub": email,
-        "exp": datetime.utcnow() + timedelta(hours=2)
+        "exp": datetime.now(timezone.utc) + timedelta(hours=2)
     }
 
     return jwt.encode(
@@ -215,7 +215,7 @@ def get_current_user(
 
         email = payload.get("sub")
 
-    except:
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
         return None
 
     user = db.scalars(
@@ -303,6 +303,7 @@ def login_page(
 
 @app.post("/login")
 def login_post(
+    request: Request,
     email: str = Form(...),
     password: str = Form(...),
     db: Session = Depends(get_db)
@@ -316,9 +317,12 @@ def login_post(
 
     if not user:
 
-        return RedirectResponse(
-            "/login",
-            status_code=303
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={
+                "error": "Invalid email or password"
+            }
         )
 
     if not verify_password(
@@ -326,9 +330,12 @@ def login_post(
         user.password
     ):
 
-        return RedirectResponse(
-            "/login",
-            status_code=303
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={
+                "error": "Invalid email or password"
+            }
         )
 
     token = create_token(
@@ -491,7 +498,7 @@ def create_expense(
     title: str = Form(...),
     amount: float = Form(...),
     category: str = Form(...),
-    description: str = Form(...),
+    description: str = Form(""),
     date: str = Form(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -547,6 +554,13 @@ def update_expense_page(
         expense_id
     )
 
+    if not expense or expense.user_id != current_user.id:
+
+        return RedirectResponse(
+            "/expenses",
+            status_code=303
+        )
+
     return templates.TemplateResponse(
         request=request,
         name="update_expense.html",
@@ -568,7 +582,7 @@ def update_expense(
     title: str = Form(...),
     amount: float = Form(...),
     category: str = Form(...),
-    description: str = Form(...),
+    description: str = Form(""),
     date: str = Form(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -586,15 +600,20 @@ def update_expense(
         expense_id
     )
 
-    if expense:
+    if not expense or expense.user_id != current_user.id:
 
-        expense.title = title
-        expense.amount = amount
-        expense.category = category
-        expense.description = description
-        expense.date = date
+        return RedirectResponse(
+            "/expenses",
+            status_code=303
+        )
 
-        db.commit()
+    expense.title = title
+    expense.amount = amount
+    expense.category = category
+    expense.description = description
+    expense.date = date
+
+    db.commit()
 
     return RedirectResponse(
         "/dashboard",
@@ -627,7 +646,7 @@ def delete_expense(
         expense_id
     )
 
-    if expense:
+    if expense and expense.user_id == current_user.id:
 
         db.delete(expense)
         db.commit()
