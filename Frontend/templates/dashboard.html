@@ -1,37 +1,209 @@
-<div class="dashboard-grid">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Your financial dashboard — track expenses, monitor budget usage, and manage your finances.">
+    <title>Dashboard — FinanceFlow</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
 
-    <div class="card success-card">
-        <h3>Total Expenses</h3>
-        <p>₹ {{ total_expense }}</p>
-    </div>
+<div class="bg-animated"></div>
 
-    <div class="card">
-        <h3>Monthly Budget</h3>
-        <p>₹ {{ monthly_budget }}</p>
-    </div>
+<div class="app-layout">
 
-    <div class="card warning-card">
-        <h3>Remaining Budget</h3>
-        <p>₹ {{ remaining_budget }}</p>
-    </div>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="48" height="48" rx="14" fill="url(#logo-grad)"/>
+                <path d="M14 32V20l10-8 10 8v12a2 2 0 01-2 2H16a2 2 0 01-2-2z" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                <path d="M20 34v-8h8v8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <defs>
+                    <linearGradient id="logo-grad" x1="0" y1="0" x2="48" y2="48">
+                        <stop stop-color="#7c3aed"/>
+                        <stop offset="1" stop-color="#06b6d4"/>
+                    </linearGradient>
+                </defs>
+            </svg>
+            <span>FinanceFlow</span>
+        </div>
 
-    <div class="card">
-        <h3>Total Transactions</h3>
-        <p>{{ total_transactions }}</p>
-    </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-section-title">Menu</div>
+
+            <a href="/dashboard" class="nav-item active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                <span>Dashboard</span>
+            </a>
+
+            <a href="/expenses" class="nav-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                <span>Expenses</span>
+            </a>
+
+            <div class="sidebar-section-title">Actions</div>
+
+            <a href="/create-expense" class="nav-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                <span>Add Expense</span>
+            </a>
+
+            <a href="/budget" class="nav-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 10h20"/></svg>
+                <span>Set Budget</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <a href="/logout" class="nav-item logout-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                <span>Logout</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+        <div class="page-header">
+            <div class="welcome-badge">
+                👋 Welcome back, <span>{{ current_user.name }}</span>
+            </div>
+            <h1>Dashboard</h1>
+            <p>Here's an overview of your financial activity</p>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <span class="stat-label">Total Expenses</span>
+                    <div class="stat-icon purple">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                    </div>
+                </div>
+                <div class="stat-value">₹{{ "%.2f"|format(total_expense) }}</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <span class="stat-label">Monthly Budget</span>
+                    <div class="stat-icon cyan">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 10h20"/></svg>
+                    </div>
+                </div>
+                <div class="stat-value">₹{{ "%.2f"|format(monthly_budget) }}</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <span class="stat-label">Remaining</span>
+                    {% if remaining_budget > 0 %}
+                    <div class="stat-icon green">
+                    {% elif remaining_budget == 0 %}
+                    <div class="stat-icon amber">
+                    {% else %}
+                    <div class="stat-icon red">
+                    {% endif %}
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    </div>
+                </div>
+                <div class="stat-value {% if remaining_budget > 0 %}green-text{% elif remaining_budget == 0 %}amber-text{% else %}red-text{% endif %}">
+                    ₹{{ "%.2f"|format(remaining_budget) }}
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <span class="stat-label">Transactions</span>
+                    <div class="stat-icon amber">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    </div>
+                </div>
+                <div class="stat-value">{{ total_transactions }}</div>
+            </div>
+
+        </div>
+
+        <!-- Budget Progress -->
+        {% if monthly_budget > 0 %}
+        {% set percentage = ((total_expense / monthly_budget) * 100) | round(1) %}
+        <div class="budget-section">
+            <div class="budget-section-header">
+                <h3>Budget Usage</h3>
+                <span class="budget-percentage {% if percentage <= 70 %}green-text{% elif percentage <= 90 %}amber-text{% else %}red-text{% endif %}">
+                    {{ percentage }}%
+                </span>
+            </div>
+            <div class="progress-bar-track">
+                <div class="progress-bar-fill {% if percentage > 90 %}danger{% elif percentage > 70 %}warning{% endif %}"
+                     style="width: 0%;"
+                     data-target="{{ [percentage, 100] | min }}">
+                </div>
+            </div>
+            <div class="budget-labels">
+                <span>₹{{ "%.2f"|format(total_expense) }} spent</span>
+                <span>₹{{ "%.2f"|format(monthly_budget) }} limit</span>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <a href="/create-expense" class="btn btn-primary" id="add-expense-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                Add Expense
+            </a>
+
+            <a href="/expenses" class="btn btn-secondary" id="view-expenses-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                View Expenses
+            </a>
+
+            <a href="/budget" class="btn btn-secondary" id="set-budget-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 10h20"/></svg>
+                Set Budget
+            </a>
+        </div>
+
+    </main>
 
 </div>
 
-<div class="actions">
+<!-- Mobile Bottom Navigation -->
+<nav class="mobile-nav">
+    <a href="/dashboard" class="active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>Home</span>
+    </a>
+    <a href="/expenses">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        <span>List</span>
+    </a>
     <a href="/create-expense">
-        <button>Add Expense</button>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        <span>Add</span>
     </a>
-
     <a href="/budget">
-        <button>Set Budget</button>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 10h20"/></svg>
+        <span>Budget</span>
     </a>
+</nav>
 
-    <a href="/logout">
-        <button class="logout-btn">Logout</button>
-    </a>
-</div>
+<script>
+    // Animate progress bar on load
+    document.addEventListener('DOMContentLoaded', () => {
+        const bar = document.querySelector('.progress-bar-fill[data-target]');
+        if (bar) {
+            setTimeout(() => {
+                bar.style.width = bar.dataset.target + '%';
+            }, 300);
+        }
+    });
+</script>
+
+</body>
+</html>

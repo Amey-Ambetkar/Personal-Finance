@@ -1,30 +1,108 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Budget</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Set your monthly budget on FinanceFlow.">
+    <title>Set Budget — FinanceFlow</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
-<div class="container">
+<div class="bg-animated"></div>
 
-    <h1>Set Budget</h1>
+<div class="app-layout">
 
-    <form action="/budget" method="post">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <svg viewBox="0 0 48 48" fill="none"><rect width="48" height="48" rx="14" fill="url(#logo-grad)"/><path d="M14 32V20l10-8 10 8v12a2 2 0 01-2 2H16a2 2 0 01-2-2z" stroke="white" stroke-width="2.5" fill="none"/><path d="M20 34v-8h8v8" stroke="white" stroke-width="2.5"/><defs><linearGradient id="logo-grad" x1="0" y1="0" x2="48" y2="48"><stop stop-color="#7c3aed"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs></svg>
+            <span>FinanceFlow</span>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-section-title">Menu</div>
+            <a href="/dashboard" class="nav-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                <span>Dashboard</span>
+            </a>
+            <a href="/expenses" class="nav-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                <span>Expenses</span>
+            </a>
+            <div class="sidebar-section-title">Actions</div>
+            <a href="/create-expense" class="nav-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                <span>Add Expense</span>
+            </a>
+            <a href="/budget" class="nav-item active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 10h20"/></svg>
+                <span>Set Budget</span>
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <a href="/logout" class="nav-item logout-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                <span>Logout</span>
+            </a>
+        </div>
+    </aside>
 
-        <input type="number"
-               step="0.01"
-               name="monthly_limit"
-               placeholder="Monthly Budget"
-               required>
+    <!-- Main Content -->
+    <main class="main-content">
 
-        <button type="submit">
-            Save Budget
-        </button>
+        <div class="page-header">
+            <h1>Set Budget</h1>
+            <p>Define your monthly spending limit</p>
+        </div>
 
-    </form>
+        <div class="form-card">
+            <h2>Monthly Budget</h2>
+            <p class="form-subtitle">Set how much you plan to spend each month</p>
+
+            <div class="info-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <div>
+                    Your monthly budget helps you track spending against a target. You'll see a progress bar on your dashboard showing how much you've used. If you exceed the limit, it will be highlighted in red.
+                </div>
+            </div>
+
+            <form action="/budget" method="post" id="budget-form">
+
+                <div class="form-group">
+                    <input type="number"
+                           id="monthly_limit"
+                           name="monthly_limit"
+                           step="0.01"
+                           min="0"
+                           placeholder=" "
+                           required>
+                    <label for="monthly_limit">Monthly Limit (₹)</label>
+                    <svg class="form-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="save-budget-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                        Save Budget
+                    </button>
+                    <a href="/dashboard" class="btn btn-secondary">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+
+    </main>
 
 </div>
+
+<!-- Mobile Bottom Navigation -->
+<nav class="mobile-nav">
+    <a href="/dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>Home</span></a>
+    <a href="/expenses"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span>List</span></a>
+    <a href="/create-expense"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span>Add</span></a>
+    <a href="/budget" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 10h20"/></svg><span>Budget</span></a>
+</nav>
 
 </body>
 </html>

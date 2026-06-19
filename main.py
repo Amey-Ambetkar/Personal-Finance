@@ -426,6 +426,39 @@ def dashboard_page(
 
 
 # ==========================================
+# EXPENSES LIST
+# ==========================================
+
+@app.get("/expenses", response_class=HTMLResponse)
+def expenses_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+
+    if not current_user:
+
+        return RedirectResponse(
+            "/login",
+            status_code=303
+        )
+
+    expenses = db.scalars(
+        select(Expense).where(
+            Expense.user_id == current_user.id
+        )
+    ).all()
+
+    return templates.TemplateResponse(
+        request=request,
+        name="expenses.html",
+        context={
+            "expenses": expenses
+        }
+    )
+
+
+# ==========================================
 # CREATE EXPENSE PAGE
 # ==========================================
 
@@ -465,7 +498,6 @@ def create_expense(
 ):
 
     if not current_user:
-
         return RedirectResponse(
             "/login",
             status_code=303
@@ -487,7 +519,6 @@ def create_expense(
         "/dashboard",
         status_code=303
     )
-
 
 # ==========================================
 # UPDATE PAGE
